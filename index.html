@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+    <head>
+    </head>
+    <body>
+        <p>
+            Start with the start.html page.
+            Click on the link below to add pages to the history stack and the go back via the back button to this page.
+            Then click the add-button to add the iframe and navigate inside of it. Then remove it and notice that when you
+            go back to the start page via the back button, this happens immediately.
+        </p>
+        <a href="page1.html">pagina 1</a>
+        <br />
+        <br />
+        <button id="add">add</button>
+        <button id="remove">remove</button>
+        <div id="container"></div>
+        <script>
+
+            var iframe,
+                add = document.getElementById('add'),
+                remove = document.getElementById('remove'),
+                initialHistoryIndex = null,
+                isInitialPage = true,
+                LOADED = 'senses-loaded';
+
+            add.addEventListener('click',addIframe);
+            remove.addEventListener('click', removeIframe);
+
+            function getLoadedHash(){
+                var hash = '';
+                if (iframe && iframe.contentWindow.location.href.indexOf(LOADED) === -1){
+                    hash = '#'+ LOADED + history.length
+                }
+                return hash;
+            }
+
+            function purgeHistoryStack(){
+                var loadedIndex,
+                    historyStackDifference = 0,
+                    currentHistoryStackIndex;
+                if (!iframe) return;
+
+                loadedIndex =  iframe.contentWindow.location.href.indexOf(LOADED) + LOADED.length;
+                if (loadedIndex > -1 && initialHistoryIndex){
+                    currentHistoryStackIndex = iframe.contentWindow.location.href.substr(loadedIndex);
+                    historyStackDifference = parseInt(initialHistoryIndex) - parseInt(currentHistoryStackIndex);
+
+                    // we calculate the difference between the initial page index in the iframe and the current page index
+                    // we navigate back that difference to immediately get to the first page and basically purging the history stack.
+                    history.go(historyStackDifference);
+
+                }
+            }
+
+            function addIframe(){
+                document.getElementById('container').innerHTML = '<iframe src="page1.html"></iframe>';
+                iframe = document.getElementsByTagName('iframe')[0];
+                iframe.addEventListener('load', onIframeLoaded);
+            }
+
+            function removeIframe(){
+                purgeHistoryStack();
+                document.getElementById('container').innerHTML = '';
+                iframe.removeEventListener('load', onIframeLoaded);
+                initialHistoryIndex = null;
+                isInitialPage = true;
+            }
+
+            function onIframeLoaded(){
+                var location = iframe.contentWindow.location;
+
+                // as soon as we have an href with LOADED in it, we leave it as this is a page of which we added the LOADED bit
+                // and there is no need to do that again
+                if (location.href.indexOf(LOADED) > -1 ) return;
+
+                if (isInitialPage) {
+                    // if the initial page in the iframe is loaded, the history.length could be too high
+                    isInitialPage = false;
+                } else if (initialHistoryIndex === null) {
+                    // when it is no longer the first page, the current index of the page in the history stack is the last page
+                    // in it and is also the second page loaded in the iframe. So the initial index in the history stack is
+                    // equal to the current length of the history minus one.
+                    initialHistoryIndex = history.length - 1;
+                }
+
+                // replace the current url with the hash added to it.
+                iframe.contentWindow.location.replace(iframe.contentWindow.location.href + getLoadedHash());
+            }
+        </script>
+    </body>
+</html>
